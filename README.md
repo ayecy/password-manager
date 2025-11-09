@@ -24,7 +24,7 @@ IDE: VS Code (с поддержкой JavaFX)
 src/
  ├── model/
  │    ├── PasswordEntry.java        # Класс одной записи (сайт, логин, пароль)
- │    └── EncryptionUtil.java       # Методы encrypt/decrypt с AES
+ │    └── EncryptionUtil.java       # Методы encrypt/decrypt с AES 
  │
  ├── service/
  │    └── PasswordManager.java      # Управление коллекцией и файлами
