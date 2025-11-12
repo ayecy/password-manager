@@ -73,7 +73,15 @@ public class ConsolePasswordManager {
 
 
     private static void savePasswordsToFile() {
-
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_NAME))) {
+            for (Map.Entry<String, String> entry : passwordStorage.entrySet()) {
+                writer.write(entry.getKey() + "|" + entry.getValue());
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.out.println("Ошибка при записи файла: " + e.getMessage());
+        }
+    }
     }
     private static String encrypt(String plainText, String secret) throws Exception {
         SecretKeySpec keySpec = new SecretKeySpec(secret.getBytes(), "AES");
