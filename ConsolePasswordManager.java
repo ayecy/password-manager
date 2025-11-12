@@ -50,7 +50,25 @@ public class ConsolePasswordManager {
 
 
     private static void addPassword() {
+        System.out.print("Введите название сервиса: ");
+        String service = scanner.nextLine();
 
+        if (passwordStorage.containsKey(service)) {
+            System.out.println("Такой сервис уже существует! Используйте пункт 'Изменить пароль'.");
+            return;
+        }
+
+        System.out.print("Введите пароль: ");
+        String password = scanner.nextLine();
+
+        try {
+            String encrypted = AESGCMUtil.encrypt(password, masterKey);
+            passwordStorage.put(service, encrypted);
+            savePasswordsToFile();
+            System.out.println("Пароль сохранён.");
+        } catch (Exception e) {
+            System.out.println("Ошибка при шифровании: " + e.getMessage());
+        }
     }
 
 
