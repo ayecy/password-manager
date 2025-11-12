@@ -73,16 +73,35 @@ public class ConsolePasswordManager {
 
 
     private static void showPasswords() {
+        if (passwordStorage.isEmpty()) {
+            System.out.println("Нет сохранённых паролей.");
+            return;
+        }
 
+        System.out.println("\n=== Ваши пароли ===");
+        for (Map.Entry<String, String> entry : passwordStorage.entrySet()) {
+            try {
+                String decrypted = AESGCMUtil.decrypt(entry.getValue(), masterKey);
+                System.out.println(entry.getKey() + ": " + decrypted);
+            } catch (Exception e) {
+                System.out.println(entry.getKey() + ": [Ошибка при расшифровке]");
+            }
+        }
     }
-
 
     private static void editPassword() {
 
     }
-
     private static void deletePassword() {
+        System.out.print("Введите название сервиса, который хотите удалить: ");
+        String service = scanner.nextLine();
 
+        if (passwordStorage.remove(service) != null) {
+            savePasswordsToFile();
+            System.out.println("Запись удалена!");
+        } else {
+            System.out.println("Такого сервиса нет!");
+        }
     }
 
     private static void loadPasswordsFromFile() {
