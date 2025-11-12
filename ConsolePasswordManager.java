@@ -88,9 +88,26 @@ public class ConsolePasswordManager {
             }
         }
     }
-
     private static void editPassword() {
+        System.out.print("Введите название сервиса, пароль для которого хотите изменить: ");
+        String service = scanner.nextLine();
 
+        if (!passwordStorage.containsKey(service)) {
+            System.out.println("Такой сервис не найден!");
+            return;
+        }
+
+        System.out.print("Введите новый пароль: ");
+        String newPassword = scanner.nextLine();
+
+        try {
+            String encrypted = AESGCMUtil.encrypt(newPassword, masterKey);
+            passwordStorage.put(service, encrypted);
+            savePasswordsToFile();
+            System.out.println("Пароль успешно обновлён!");
+        } catch (Exception e) {
+            System.out.println("Ошибка при обновлении пароля: " + e.getMessage());
+        }
     }
     private static void deletePassword() {
         System.out.print("Введите название сервиса, который хотите удалить: ");
