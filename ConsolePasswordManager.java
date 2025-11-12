@@ -68,9 +68,21 @@ public class ConsolePasswordManager {
     }
 
     private static void loadPasswordsFromFile() {
+        File file = new File(FILE_NAME);
+        if (!file.exists()) return;
 
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\|");
+                if (parts.length == 2) {
+                    passwordStorage.put(parts[0], parts[1]);
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Ошибка при чтении файла: " + e.getMessage());
+        }
     }
-
 
     private static void savePasswordsToFile() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_NAME))) {
@@ -82,7 +94,7 @@ public class ConsolePasswordManager {
             System.out.println("Ошибка при записи файла: " + e.getMessage());
         }
     }
-    }
+
     private static String encrypt(String plainText, String secret) throws Exception {
         SecretKeySpec keySpec = new SecretKeySpec(secret.getBytes(), "AES");
         Cipher cipher = Cipher.getInstance(ALGORITHM);
