@@ -124,7 +124,6 @@ public class ConsolePasswordManager {
     private static void loadPasswordsFromFile() {
         File file = new File(FILE_NAME);
         if (!file.exists()) return;
-
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -148,21 +147,4 @@ public class ConsolePasswordManager {
             System.out.println("Ошибка при записи файла: " + e.getMessage());
         }
     }
-
-    private static String encrypt(String plainText, String secret) throws Exception {
-        SecretKeySpec keySpec = new SecretKeySpec(secret.getBytes(), "AES");
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
-        cipher.init(Cipher.ENCRYPT_MODE, keySpec);
-        byte[] encryptedBytes = cipher.doFinal(plainText.getBytes());
-        return Base64.getEncoder().encodeToString(encryptedBytes);
-    }
-    private static String decrypt(String encryptedText, String secret) throws Exception {
-        SecretKeySpec keySpec = new SecretKeySpec(secret.getBytes(), "AES");
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
-        cipher.init(Cipher.DECRYPT_MODE, keySpec);
-        byte[] decodedBytes = Base64.getDecoder().decode(encryptedText);
-        byte[] decryptedBytes = cipher.doFinal(decodedBytes);
-        return new String(decryptedBytes);
-    }
-
 }
