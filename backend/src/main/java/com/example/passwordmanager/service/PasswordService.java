@@ -24,7 +24,6 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.example.passwordmanager.model.PasswordEntity;
 import com.example.passwordmanager.repository.JsonPasswordRepository;
@@ -143,7 +142,7 @@ public class PasswordService {
     }
 
 
-    @Transactional
+
     public void addPassword(String masterKey, String service, String login, String password) throws Exception {
         validateInput(service, login, password);
         SecretKey key = getKey(masterKey);
@@ -163,7 +162,7 @@ public class PasswordService {
     }
 
 
-    @Transactional
+
     public void updatePassword(String masterKey, String service, String login, String password) throws Exception {
         validateInput(service, login, password);
         SecretKey key = getKey(masterKey);
@@ -181,7 +180,7 @@ public class PasswordService {
     }
 
 
-    @Transactional
+
     public void deletePassword(String masterKey, String service) {
         if (service == null || service.isBlank()) {
             throw new IllegalArgumentException("Service name cannot be empty");
