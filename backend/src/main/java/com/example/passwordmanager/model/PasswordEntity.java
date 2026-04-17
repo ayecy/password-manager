@@ -2,7 +2,7 @@ package com.example.passwordmanager.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-@JsonIgnoreProperties(ignoreUnknown = true) // защита от лишних полей в JSON
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PasswordEntity {
 
     private String service;
