@@ -9,7 +9,7 @@ const emit = defineEmits(['delete', 'edit']);
 
 const copied = ref(null);
 
-// Fallback для копирования (если современный Clipboard API недоступен)
+
 const copyToClipboardFallback = (text) => {
   try {
     const textarea = document.createElement('textarea');
@@ -30,7 +30,6 @@ const copyToClipboardFallback = (text) => {
   }
 };
 
-// Универсальный метод копирования
 const copyToClipboard = async (text) => {
   if (!text && text !== '') return false;
 
@@ -45,7 +44,7 @@ const copyToClipboard = async (text) => {
   return copyToClipboardFallback(String(text));
 };
 
-// ЛОГИН: копируем напрямую из entry.login
+
 const handleCopyLogin = async (entry) => {
   const login = entry?.login;
   if (!login) {
@@ -62,7 +61,7 @@ const handleCopyLogin = async (entry) => {
   }
 };
 
-// ПАРОЛЬ: копируем напрямую из entry.password
+
 const handleCopyPassword = async (entry) => {
   const password = entry?.password;
   if (!password) {

@@ -4,7 +4,6 @@ axios.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      // Очистить ключ и перенаправить на ввод мастер-ключа
       window.dispatchEvent(new CustomEvent('session-expired'));
     }
     return Promise.reject(error);
@@ -25,7 +24,6 @@ export const getPasswords = async (masterKey) => {
   return response.data;
 };
 
-// Только дешифровка пароля
 export const getPasswordDecrypted = async (service, masterKey) => {
   const response = await axios.get(`${API_BASE}/passwords/${service}/decrypt`, {
     headers: { 'X-Master-Key': masterKey }
