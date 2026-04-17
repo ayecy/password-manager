@@ -1,26 +1,35 @@
 package com.example.passwordmanager.service;
 
-import com.example.passwordmanager.model.PasswordEntity;
-import com.example.passwordmanager.repository.JsonPasswordRepository; // ← Новый репозиторий для JSON
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.generators.PKCS5S2ParametersGenerator;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.PreDestroy;
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import java.security.SecureRandom;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import com.example.passwordmanager.model.PasswordEntity;
+import com.example.passwordmanager.repository.JsonPasswordRepository;
+
+import jakarta.annotation.PreDestroy;
 
 @Service
 public class PasswordService {
@@ -224,7 +233,7 @@ public class PasswordService {
             throw new IllegalArgumentException("Cannot encrypt null value");
         }
         byte[] iv = new byte[GCM_IV_LENGTH];
-        new SecureRandom().nextBytes(iv); // Криптографически стойкий генератор
+        new SecureRandom().nextBytes(iv);
 
         Cipher cipher = Cipher.getInstance(ALGORITHM);
         GCMParameterSpec ivSpec = new GCMParameterSpec(GCM_TAG_LENGTH * 8, iv);

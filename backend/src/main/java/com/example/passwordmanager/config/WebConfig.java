@@ -1,4 +1,3 @@
-// backend/src/main/java/com/example/passwordmanager/config/WebConfig.java
 package com.example.passwordmanager.config;
 
 import org.springframework.context.annotation.Configuration;
