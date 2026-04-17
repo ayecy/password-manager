@@ -180,7 +180,6 @@ public class PasswordService {
     }
 
 
-
     public void deletePassword(String masterKey, String service) {
         if (service == null || service.isBlank()) {
             throw new IllegalArgumentException("Service name cannot be empty");
