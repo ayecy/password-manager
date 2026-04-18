@@ -28,7 +28,7 @@ export const getPasswordDecrypted = async (service, masterKey) => {
   const response = await axios.get(`${API_BASE}/passwords/${service}/decrypt`, {
     headers: { 'X-Master-Key': masterKey }
   });
-  return response.data; // { service, login, password }
+  return response.data; 
 };
 
 export const addPassword = async (entry, masterKey) => {

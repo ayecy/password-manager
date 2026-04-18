@@ -1,16 +1,26 @@
 package com.example.passwordmanager.controller;
 
-import com.example.passwordmanager.service.PasswordService;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
+import java.util.List;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
+import com.example.passwordmanager.service.PasswordService;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 
 @RestController
 @RequestMapping("/api")
@@ -169,7 +179,7 @@ public class PasswordController {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(key.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(hash).substring(0, 16) + "...";
-        } catch (Exception e) {
+        } catch (java.security.NoSuchAlgorithmException e) {
             return "hash-error";
         }
     }

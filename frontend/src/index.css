@@ -136,37 +136,31 @@ tr:hover {
 
 .actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn,
+.delete-btn {
+  padding: 6px;
   border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  background: transparent;
   cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+  color: #6b7280;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition);
-}
-
-.edit-btn {
-  background: #4cc9f0;
-  color: white;
 }
 
 .edit-btn:hover {
-  background: #4361ee;
-}
-
-.delete-btn {
-  background: var(--danger);
-  color: white;
+  background-color: #fef3c7;
+  color: #f59e0b;
 }
 
 .delete-btn:hover {
-  background: #d90429;
+  background-color: #fee2e2;
+  color: #ef4444;
 }
 
 .empty-state {
