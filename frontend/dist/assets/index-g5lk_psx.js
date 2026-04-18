@@ -9017,6 +9017,15 @@ const {
   getAdapter,
   mergeConfig
 } = axios;
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      window.dispatchEvent(new CustomEvent("session-expired"));
+    }
+    return Promise.reject(error);
+  }
+);
 const API_BASE = "/api";
 const unlockVault = async (masterKey) => {
   const response = await axios.post(`${API_BASE}/unlock`, { masterKey });
@@ -9489,6 +9498,11 @@ const _sfc_main = {
     const error = ref("");
     const editingEntry = ref(null);
     onMounted(async () => {
+      window.addEventListener("session-expired", () => {
+        masterKey.value = null;
+        passwords.value = [];
+        error.value = "Сессия истекла, введите мастер-ключ заново";
+      });
       try {
         await getStatus();
         loading.value = false;
