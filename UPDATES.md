@@ -14,3 +14,6 @@ Password Manager 1.2:
       backend/src/main/java/com/example/passwordmanager/repository/JsonPasswordRepository.java
     - Added logging for database path resolution and retrieval errors in
       backend/src/main/java/com/example/passwordmanager/repository/JsonPasswordRepository.java
+
+Password Manager 2.0:
+    - Full web-app redesign
