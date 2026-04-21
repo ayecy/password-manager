@@ -1,7 +1,12 @@
 /Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/PasswordManagerApplication.java
 /Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/config/WebConfig.java
+/Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/controller/AuthController.java
 /Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/controller/PasswordController.java
 /Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/model/PasswordEntity.java
 /Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/model/PasswordEntry.java
+/Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/model/User.java
 /Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/repository/JsonPasswordRepository.java
+/Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/repository/JsonUserRepository.java
+/Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/service/AuthService.java
 /Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/service/PasswordService.java
+/Users/ivanbackky/vsprojects/petproject/password-manager/backend/src/main/java/com/example/passwordmanager/util/JwtUtil.java
