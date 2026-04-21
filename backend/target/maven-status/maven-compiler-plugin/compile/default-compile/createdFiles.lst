@@ -14,6 +14,5 @@ com/example/passwordmanager/util/JwtUtil.class
 com/example/passwordmanager/controller/AuthController$RegisterRequest.class
 com/example/passwordmanager/PasswordManagerApplication.class
 com/example/passwordmanager/repository/JsonPasswordRepository.class
-com/example/passwordmanager/controller/PasswordController$UnlockRequest.class
 com/example/passwordmanager/controller/AuthController$LoginRequest.class
 com/example/passwordmanager/controller/PasswordController$PasswordRequest.class

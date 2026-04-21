@@ -150,4 +150,25 @@ public class JsonPasswordRepository {
                 ? dataFilePathResolved.toString() 
                 : "not initialized";
     }
+
+
+    public PasswordEntity updateByOriginalService(String originalService, PasswordEntity updatedEntity) {
+        lock.writeLock().lock();
+        try {
+            Optional<PasswordEntity> existing = findByService(originalService);
+            if (existing.isPresent()) {
+                int idx = data.indexOf(existing.get());
+                data.set(idx, updatedEntity);
+                saveToFile();
+                log.debug("Updated entry: {} → {}", originalService, updatedEntity.getService());
+                return updatedEntity;
+            }
+            log.warn("Update failed: entry not found for service: {}", originalService);
+            throw new RuntimeException("Entry not found: " + originalService);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to update entry", e);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
 }

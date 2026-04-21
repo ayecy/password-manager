@@ -1,1 +1,6 @@
-[]
+[ {
+  "username" : "balumba",
+  "passwordHash" : "$2a$12$4hBNjPEcpHGFkS2n9W07WukW.FPNd0YHGsNlUMIgImtEUGe1Rf7Ve",
+  "masterKeySalt" : "+CGTBxa8YvoGXbTsjrcyIw==",
+  "createdAt" : 1776757212224
+} ]

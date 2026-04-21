@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { login, getPasswords, addPassword, updatePassword, deletePassword, type PasswordEntry } from './services/api'
+import { login, register, getPasswords, addPassword, updatePassword, deletePassword, type PasswordEntry } from './services/api'
 
-// === State для авторизации ===
+// === State ===
 const isAuthenticated = ref(false)
 const username = ref('')
 const password = ref('')
@@ -11,26 +11,39 @@ const isLoading = ref(false)
 const loginError = ref('')
 const passwordError = ref('')
 
-// === State для хранилища ===
+// Регистрация
+const isRegistering = ref(false)
+const regUsername = ref('')
+const regPassword = ref('')
+const regConfirmPassword = ref('')
+const showRegPassword = ref(false)
+const showRegConfirmPassword = ref(false)
+const regError = ref('')
+const regSuccess = ref(false)
+
+// 🔐 Ключ хранилища (хранится ТОЛЬКО в памяти, очищается при logout)
+const vaultKey = ref('')
+
+// Хранилище
 const jwtToken = ref('')
 const entries = ref<PasswordEntry[]>([])
 const searchQuery = ref('')
 const visiblePasswords = ref<Set<string>>(new Set())
 const copiedId = ref<string | null>(null)
 
-// === Modal state ===
+// Модалка
 const showModal = ref(false)
 const modalMode = ref<'add' | 'edit'>('add')
 const editingService = ref<string | null>(null)
 const formData = ref({ service: '', login: '', password: '' })
 const showFormPassword = ref(false)
 
-// === Particles (анимация фона) ===
+// Частицы
 const particles = ref<any[]>([])
 const mousePos = ref({ x: 0, y: 0 })
 let animationFrame: number
 
-// === Фильтрация записей ===
+// Вычисления
 const filteredEntries = computed(() => {
   if (!searchQuery.value) return entries.value
   const q = searchQuery.value.toLowerCase()
@@ -48,7 +61,6 @@ const stats = computed(() => ({
 const handleLogin = async () => {
   loginError.value = ''
   passwordError.value = ''
-  
   if (!username.value || !password.value) {
     if (!username.value) loginError.value = 'Неверный логин'
     if (!password.value) passwordError.value = 'Неверный пароль'
@@ -59,63 +71,82 @@ const handleLogin = async () => {
   try {
     const { data } = await login(username.value, password.value)
     jwtToken.value = data.token
+    vaultKey.value = password.value // 🔐 Сохраняем в памяти для деривации
     isAuthenticated.value = true
     await loadPasswords()
   } catch (err: any) {
     const status = err.response?.status
-    const data = err.response?.data
-    const msg = (data?.error || data?.message || '').toLowerCase()
-    
-    // 401 — явная ошибка аутентификации
+    const msg = (err.response?.data?.error || '').toLowerCase()
     if (status === 401) {
-      if (msg.includes('логин') || msg.includes('username') || msg.includes('not found')) {
-        loginError.value = 'Неверный логин'
-      } else {
-        passwordError.value = 'Неверный пароль'
-      }
-    }
-    // 500 с текстом ошибки — для отладки
-    else if (status === 500 && (msg.includes('credentials') || msg.includes('invalid'))) {
-      if (msg.includes('логин') || msg.includes('username')) {
-        loginError.value = 'Неверный логин'
-      } else {
-        passwordError.value = 'Неверный пароль'
-      }
-      console.warn('Backend returned 500 for auth error — should be 401')
-    }
-    // Сетевая ошибка или реальный 500
-    else {
+      msg.includes('логин') ? loginError.value = 'Неверный логин' : passwordError.value = 'Неверный пароль'
+    } else {
       loginError.value = 'Ошибка подключения к серверу'
-      console.error('Login error:', { status, data, message: err.message })
+      console.error('Login error:', err)
     }
-  } finally {
-    isLoading.value = false
+  } finally { isLoading.value = false }
+}
+
+// === Регистрация ===
+const handleRegister = async () => {
+  regError.value = ''
+  if (!regUsername.value || !regPassword.value || !regConfirmPassword.value) {
+    regError.value = 'Заполните все поля'; return
   }
+  if (regPassword.value !== regConfirmPassword.value) {
+    regError.value = 'Пароли не совпадают'; return
+  }
+  if (regPassword.value.length < 8) {
+    regError.value = 'Пароль должен содержать минимум 8 символов'; return
+  }
+
+  isLoading.value = true
+  try {
+    const { data } = await register(regUsername.value, regPassword.value, regPassword.value)
+    jwtToken.value = data.token
+    vaultKey.value = regPassword.value // 🔐 Сохраняем в памяти
+    regSuccess.value = true
+    setTimeout(() => { resetRegistration(); isRegistering.value = false }, 1500)
+  } catch (err: any) {
+    const msg = (err.response?.data?.error || '').toLowerCase()
+    if (err.response?.status === 400 && (msg.includes('username') || msg.includes('занят'))) {
+      regError.value = 'Такой логин уже занят'
+    } else {
+      regError.value = 'Ошибка сервера'
+      console.error('Register error:', err)
+    }
+  } finally { isLoading.value = false }
+}
+
+const resetRegistration = () => {
+  regUsername.value = ''; regPassword.value = ''; regConfirmPassword.value = ''
+  regError.value = ''; regSuccess.value = false
+  showRegPassword.value = false; showRegConfirmPassword.value = false
+}
+
+const toggleRegister = () => {
+  isRegistering.value = !isRegistering.value
+  if (!isRegistering.value) resetRegistration()
+  loginError.value = ''; passwordError.value = ''
 }
 
 const handleLogout = () => {
-  isAuthenticated.value = false
-  jwtToken.value = ''
-  username.value = ''
-  password.value = ''
-  entries.value = []
-  visiblePasswords.value.clear()
-  loginError.value = ''
-  passwordError.value = ''
+  isAuthenticated.value = false; jwtToken.value = ''; vaultKey.value = ''
+  username.value = ''; password.value = ''; entries.value = []
+  visiblePasswords.value.clear(); loginError.value = ''; passwordError.value = ''
 }
 
 // === Загрузка паролей ===
 const loadPasswords = async () => {
-  if (!jwtToken.value) return
+  if (!jwtToken.value || !vaultKey.value) return
   try {
-    const { data } = await getPasswords(jwtToken.value)
+    const { data } = await getPasswords(jwtToken.value, vaultKey.value)
     entries.value = data
-  } catch {
-    // Ошибка уже обработана интерцептором (сессия истекла)
+  } catch (err) {
+    console.error('Failed to load passwords:', err)
   }
 }
 
-// === Копирование и видимость паролей ===
+// === CRUD ===
 const togglePasswordVisibility = (service: string) => {
   const s = new Set(visiblePasswords.value)
   s.has(service) ? s.delete(service) : s.add(service)
@@ -128,65 +159,60 @@ const copyToClipboard = async (text: string, id: string) => {
   setTimeout(() => { copiedId.value = null }, 2000)
 }
 
-// === Modal & CRUD ===
 const openAddModal = () => {
-  modalMode.value = 'add'
-  editingService.value = null
+  modalMode.value = 'add'; editingService.value = null
   formData.value = { service: '', login: '', password: '' }
   showModal.value = true
 }
 
 const openEditModal = (entry: PasswordEntry) => {
-  modalMode.value = 'edit'
-  editingService.value = entry.service
+  modalMode.value = 'edit'; editingService.value = entry.service
   formData.value = { service: entry.service, login: entry.login, password: entry.password }
   showModal.value = true
 }
 
-const closeModal = () => {
-  showModal.value = false
-  showFormPassword.value = false
-}
+const closeModal = () => { showModal.value = false; showFormPassword.value = false }
 
 const saveEntry = async () => {
   if (!formData.value.service || !formData.value.login || !formData.value.password) return
+  if (!vaultKey.value) { alert('Хранилище заблокировано. Перезайдите в аккаунт.'); return }
+  
   isLoading.value = true
   try {
     if (modalMode.value === 'add') {
-      await addPassword(jwtToken.value, formData.value)
+      await addPassword(jwtToken.value, vaultKey.value, formData.value)
     } else if (editingService.value) {
-      await updatePassword(jwtToken.value, editingService.value, formData.value)
+      await updatePassword(jwtToken.value, vaultKey.value, editingService.value, formData.value)
     }
     await loadPasswords()
     closeModal()
   } catch (err: any) {
-    // Можно добавить тост-уведомление
-  } finally {
-    isLoading.value = false
-  }
+    console.error('Save entry failed:', err)
+    alert(err.response?.data?.error || 'Ошибка сохранения записи')
+  } finally { isLoading.value = false }
 }
 
 const deleteEntry = async (service: string) => {
   if (!confirm(`Удалить запись для ${service}?`)) return
+  if (!vaultKey.value) return
+  
   try {
-    await deletePassword(jwtToken.value, service)
+    await deletePassword(jwtToken.value, vaultKey.value, service)
     await loadPasswords()
-  } catch {
-    // Обработка ошибки
+  } catch (err) {
+    console.error('Delete failed:', err)
+    alert('Ошибка удаления')
   }
 }
 
-// === Генератор паролей ===
+// === Утилиты ===
 const generatePassword = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
-  formData.value.password = Array.from({ length: 20 }, () => 
-    chars[Math.floor(Math.random() * chars.length)]
-  ).join('')
+  formData.value.password = Array.from({ length: 20 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-// === Утилиты для UI ===
 const getServiceColor = (service: string) => {
-  const colors: Record<string, string> = {
+  const c: Record<string, string> = {
     'Google': 'from-red-500/20 to-yellow-500/20 border-red-500/30',
     'GitHub': 'from-gray-500/20 to-gray-700/20 border-gray-500/30',
     'Netflix': 'from-red-600/20 to-red-800/20 border-red-600/30',
@@ -194,7 +220,7 @@ const getServiceColor = (service: string) => {
     'Amazon': 'from-orange-500/20 to-orange-700/20 border-orange-500/30',
     'Discord': 'from-indigo-500/20 to-indigo-700/20 border-indigo-500/30',
   }
-  return colors[service] || 'from-primary/20 to-primary/5 border-primary/30'
+  return c[service] || 'from-primary/20 to-primary/5 border-primary/30'
 }
 
 const getPasswordStrength = (pwd: string) => {
@@ -207,19 +233,14 @@ const getPasswordStrength = (pwd: string) => {
   return s
 }
 
-// === Particles init ===
+// === Частицы ===
 const initParticles = () => {
   particles.value = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    x: Math.random() * window.innerWidth,
-    y: Math.random() * window.innerHeight,
-    size: Math.random() * 3 + 1,
-    speedX: (Math.random() - 0.5) * 0.5,
-    speedY: (Math.random() - 0.5) * 0.5,
-    opacity: Math.random() * 0.5 + 0.1
+    id: i, x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
+    size: Math.random() * 3 + 1, speedX: (Math.random() - 0.5) * 0.5,
+    speedY: (Math.random() - 0.5) * 0.5, opacity: Math.random() * 0.5 + 0.1
   }))
 }
-
 const animateParticles = () => {
   particles.value.forEach(p => {
     p.x += p.speedX; p.y += p.speedY
@@ -228,17 +249,13 @@ const animateParticles = () => {
   })
   animationFrame = requestAnimationFrame(animateParticles)
 }
-
 const handleMouseMove = (e: MouseEvent) => { mousePos.value = { x: e.clientX, y: e.clientY } }
 
-// === Lifecycle ===
 onMounted(() => {
-  initParticles()
-  animateParticles()
+  initParticles(); animateParticles()
   window.addEventListener('mousemove', handleMouseMove)
   window.addEventListener('session-expired', handleLogout)
 })
-
 onUnmounted(() => {
   cancelAnimationFrame(animationFrame)
   window.removeEventListener('mousemove', handleMouseMove)
@@ -250,11 +267,7 @@ onUnmounted(() => {
   <div class="min-h-screen relative overflow-hidden">
     <!-- Background Image with Overlay -->
     <div class="fixed inset-0 z-0">
-      <img 
-        src="/cyber-bg.jpg" 
-        alt="" 
-        class="w-full h-full object-cover"
-      />
+      <img src="/cyber-bg.jpg" alt="" class="w-full h-full object-cover" />
       <div class="absolute inset-0 bg-gradient-to-br from-background/95 via-background/90 to-background/80"></div>
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent"></div>
     </div>
@@ -288,7 +301,7 @@ onUnmounted(() => {
     <!-- Grid Pattern Overlay -->
     <div class="fixed inset-0 z-0 opacity-[0.02]" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cg fill=&quot;none&quot; fill-rule=&quot;evenodd&quot;%3E%3Cg fill=&quot;%2310b981&quot; fill-opacity=&quot;0.4&quot;%3E%3Cpath d=&quot;M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z&quot;/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
 
-    <!-- Login Screen -->
+    <!-- Login / Register Screen -->
     <div v-if="!isAuthenticated" class="relative z-10 min-h-screen flex items-center justify-center p-4">
       <div class="w-full max-w-lg animate-fade-in">
         <!-- Decorative Elements -->
@@ -309,7 +322,7 @@ onUnmounted(() => {
         </div>
         
         <!-- Login Card -->
-        <div class="relative glass-card rounded-3xl p-8 shadow-2xl border border-white/10">
+        <div v-if="!isRegistering && !regSuccess" class="relative glass-card rounded-3xl p-8 shadow-2xl border border-white/10">
           <div class="absolute -inset-1 bg-gradient-to-r from-primary/20 via-cyan-500/20 to-primary/20 rounded-3xl blur-xl opacity-50"></div>
           <div class="relative">
             <form @submit.prevent="handleLogin" class="space-y-6">
@@ -322,7 +335,6 @@ onUnmounted(() => {
                 </div>
                 <div class="relative group">
                   <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-cyan-500/50 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition duration-500 pointer-events-none"></div>
-                  
                   <input
                     v-model="username"
                     type="text"
@@ -341,7 +353,6 @@ onUnmounted(() => {
                 </div>
                 <div class="relative group">
                   <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-cyan-500/50 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition duration-500 pointer-events-none"></div>
-                  
                   <input
                     v-model="password"
                     :type="showPassword ? 'text' : 'password'"
@@ -349,8 +360,6 @@ onUnmounted(() => {
                     autocomplete="current-password"
                     class="relative w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-all text-lg pr-12"
                   />
-                  
-                  <!-- Кнопка показа/скрытия пароля -->
                   <button
                     type="button"
                     @click="showPassword = !showPassword"
@@ -386,6 +395,25 @@ onUnmounted(() => {
               
             </form>
             
+            <!-- Divider -->
+            <div class="flex items-center my-6">
+              <div class="flex-1 border-t border-white/10"></div>
+              <span class="px-4 text-sm text-muted-foreground">Или</span>
+              <div class="flex-1 border-t border-white/10"></div>
+            </div>
+            
+            <!-- Register Button -->
+            <button
+              type="button"
+              @click="toggleRegister"
+              class="w-full py-4 px-6 bg-white/5 hover:bg-white/10 text-foreground font-semibold rounded-2xl transition-all duration-300 border border-white/10 flex items-center justify-center gap-3 text-lg"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              <span>Зарегистрироваться</span>
+            </button>
+            
             <!-- Security Info -->
             <div class="mt-8 pt-6 border-t border-white/10">
               <div class="grid grid-cols-3 gap-4">
@@ -418,10 +446,147 @@ onUnmounted(() => {
             
           </div>
         </div>
+        
+        <!-- Register Card -->
+        <div v-else-if="!regSuccess" class="relative glass-card rounded-3xl p-8 shadow-2xl border border-white/10">
+          <div class="absolute -inset-1 bg-gradient-to-r from-primary/20 via-cyan-500/20 to-primary/20 rounded-3xl blur-xl opacity-50"></div>
+          <div class="relative">
+            <form @submit.prevent="handleRegister" class="space-y-5">
+              
+              <!-- Логин -->
+              <div>
+                <label class="block text-sm font-medium text-foreground mb-2">Логин</label>
+                <div v-if="regError && !regUsername" class="text-red-500 text-sm mb-2 font-medium animate-shake">
+                  {{ regError }}
+                </div>
+                <div class="relative group">
+                  <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-cyan-500/50 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition duration-500 pointer-events-none"></div>
+                  <input
+                    v-model="regUsername"
+                    type="text"
+                    placeholder="Введите логин"
+                    autocomplete="username"
+                    class="relative w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-all text-lg"
+                  />
+                </div>
+              </div>
+              
+              <!-- Пароль -->
+              <div>
+                <label class="block text-sm font-medium text-foreground mb-2">Пароль</label>
+                <div class="relative group">
+                  <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-cyan-500/50 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition duration-500 pointer-events-none"></div>
+                  <input
+                    v-model="regPassword"
+                    :type="showRegPassword ? 'text' : 'password'"
+                    placeholder="Введите пароль"
+                    autocomplete="new-password"
+                    class="relative w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-all text-lg pr-12"
+                  />
+                  <button
+                    type="button"
+                    @click="showRegPassword = !showRegPassword"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 z-10"
+                    tabindex="-1"
+                  >
+                    <svg v-if="showRegPassword" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                    <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Повтор пароля -->
+              <div>
+                <label class="block text-sm font-medium text-foreground mb-2">Повторите пароль</label>
+                <div v-if="regError && regPassword !== regConfirmPassword" class="text-red-500 text-sm mb-2 font-medium animate-shake">
+                  {{ regError }}
+                </div>
+                <div class="relative group">
+                  <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-cyan-500/50 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition duration-500 pointer-events-none"></div>
+                  <input
+                    v-model="regConfirmPassword"
+                    :type="showRegConfirmPassword ? 'text' : 'password'"
+                    placeholder="Повторите пароль"
+                    autocomplete="new-password"
+                    class="relative w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-all text-lg pr-12"
+                  />
+                  <button
+                    type="button"
+                    @click="showRegConfirmPassword = !showRegConfirmPassword"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 z-10"
+                    tabindex="-1"
+                  >
+                    <svg v-if="showRegConfirmPassword" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                    <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Ошибка регистрации -->
+              <div v-if="regError && regUsername && (regPassword === regConfirmPassword)" class="text-red-500 text-sm font-medium animate-shake">
+                {{ regError }}
+              </div>
+              
+              <!-- Кнопка Зарегистрироваться -->
+              <button
+                type="submit"
+                :disabled="!regUsername || !regPassword || !regConfirmPassword || isLoading"
+                class="w-full py-4 px-6 bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 disabled:from-primary/50 disabled:to-emerald-600/50 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 text-lg shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
+              >
+                <svg v-if="isLoading" class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                <span>{{ isLoading ? 'Регистрация...' : 'Зарегистрироваться' }}</span>
+              </button>
+              
+            </form>
+            
+            <!-- Back to Login -->
+            <div class="mt-6 text-center">
+              <button
+                type="button"
+                @click="toggleRegister"
+                class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ← Вернуться ко входу
+              </button>
+            </div>
+            
+          </div>
+        </div>
+        
+        <!-- Success Message (после регистрации) -->
+        <div v-else class="relative glass-card rounded-2xl p-6 shadow-xl border border-white/10 max-w-sm mx-auto animate-scale-in">
+          <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-2xl blur-xl opacity-50"></div>
+          <div class="relative text-center">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
+              <svg class="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-foreground mb-2">Регистрация успешна!</h3>
+            <p class="text-sm text-muted-foreground">Перенаправляем на вход...</p>
+          </div>
+        </div>
+        
       </div>
     </div>
 
-    <!-- Main Dashboard (показываем после успешного входа) -->
+    <!-- Main Dashboard (после успешного входа) -->
     <div v-else class="relative z-10 min-h-screen">
       <!-- Header -->
       <header class="sticky top-0 z-40 glass-card border-b border-white/10">
@@ -784,3 +949,49 @@ onUnmounted(() => {
     </Teleport>
   </div>
 </template>
+
+<style>
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glow {
+  box-shadow: 0 0 40px rgba(16, 185, 129, 0.3);
+}
+.glow-sm {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-fade-in { animation: fade-in 0.5s ease-out; }
+.animate-slide-up { animation: slide-up 0.5s ease-out both; }
+.animate-scale-in { animation: scale-in 0.3s ease-out; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+</style>

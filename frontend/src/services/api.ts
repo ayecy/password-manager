@@ -6,61 +6,49 @@ export interface PasswordEntry {
   password: string;
 }
 
-export interface LoginResponse {
+export interface AuthResponse {
   token: string;
 }
-
-export interface RegisterResponse {
-  token: string;
-}
-
 
 const api = axios.create({
   baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  headers: { 'Content-Type': 'application/json' }
 });
 
-
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
       window.dispatchEvent(new CustomEvent('session-expired'));
     }
-    return Promise.reject(error);
+    return Promise.reject(err);
   }
 );
 
-
+// === АВТОРИЗАЦИЯ ===
 export const register = (username: string, password: string, masterKey: string) =>
-  api.post<RegisterResponse>('/auth/register', { username, password, masterKey });
-
+  api.post<AuthResponse>('/auth/register', { username, password, masterKey });
 
 export const login = (username: string, password: string) =>
-  api.post<LoginResponse>('/auth/login', { username, password });
+  api.post<AuthResponse>('/auth/login', { username, password });
 
-
-export const getPasswords = (token: string) =>
+// === ХРАНИЛИЩЕ (теперь требуют masterKey для деривации) ===
+export const getPasswords = (token: string, masterKey: string) =>
   api.get<PasswordEntry[]>('/passwords', {
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { 'Authorization': `Bearer ${token}`, 'X-Master-Key': masterKey }
   });
 
-
-export const addPassword = (token: string, entry: Omit<PasswordEntry, 'id'>) =>
+export const addPassword = (token: string, masterKey: string, entry: Omit<PasswordEntry, 'id'>) =>
   api.post('/passwords', entry, {
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { 'Authorization': `Bearer ${token}`, 'X-Master-Key': masterKey }
   });
 
-
-export const updatePassword = (token: string, service: string, entry: Omit<PasswordEntry, 'id'>) =>
+export const updatePassword = (token: string, masterKey: string, service: string, entry: Omit<PasswordEntry, 'id'>) =>
   api.put(`/passwords/${service}`, entry, {
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { 'Authorization': `Bearer ${token}`, 'X-Master-Key': masterKey }
   });
 
-
-export const deletePassword = (token: string, service: string) =>
+export const deletePassword = (token: string, masterKey: string, service: string) =>
   api.delete(`/passwords/${service}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { 'Authorization': `Bearer ${token}`, 'X-Master-Key': masterKey }
   });

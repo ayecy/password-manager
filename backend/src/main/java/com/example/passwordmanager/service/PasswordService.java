@@ -1,7 +1,23 @@
 package com.example.passwordmanager.service;
 
-import com.example.passwordmanager.model.PasswordEntity;
-import com.example.passwordmanager.repository.JsonPasswordRepository;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.generators.PKCS5S2ParametersGenerator;
 import org.bouncycastle.crypto.params.KeyParameter;
@@ -9,17 +25,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.example.passwordmanager.model.PasswordEntity;
+import com.example.passwordmanager.repository.JsonPasswordRepository;
+
 import jakarta.annotation.PreDestroy;
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import java.security.SecureRandom;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public final class PasswordService {
@@ -147,20 +156,29 @@ public final class PasswordService {
     }
 
 
-    public void updatePassword(String sessionKey, String service, String login, String password) throws Exception {
-        validateInput(service, login, password);
+    /**
+     * @param sessionKey JWT или хэш мастер-ключа
+     * @param originalService оригинальное название сервиса (из пути URL)
+     * @param newService новое название сервиса (из тела запроса)
+     */
+    public void updatePassword(String sessionKey, String originalService, String newService, String login, String password) throws Exception {
+        validateInput(newService, login, password);
         SecretKey key = getVaultKey(sessionKey);
 
-        PasswordEntity entity = passwordRepository.findByService(service)
-                .orElseThrow(() -> {
-                    log.warn("Update failed: entry not found for service: {}", service);
-                    return new IllegalArgumentException("Запись не найдена");
-                });
+        if (!originalService.equals(newService) && passwordRepository.existsByService(newService)) {
+            log.warn("Conflict: cannot rename {} to {} (already exists)", originalService, newService);
+            throw new IllegalArgumentException("Запись с таким названием сервиса уже существует");
+        }
 
-        entity.setEncryptedLogin(encrypt(login, key));
-        entity.setEncryptedPassword(encrypt(password, key));
-        passwordRepository.save(entity);
-        log.info("Updated password entry for service: {} (session: {})", service, truncateHash(sessionKey));
+        PasswordEntity updatedEntity = new PasswordEntity(
+                newService,
+                encrypt(login, key),
+                encrypt(password, key)
+        );
+        
+        passwordRepository.updateByOriginalService(originalService, updatedEntity);
+        
+        log.info("Updated password entry: {} → {}", originalService, newService);
     }
 
 
@@ -331,18 +349,5 @@ public final class PasswordService {
             Thread.currentThread().interrupt();
         }
         log.info("PasswordService shutdown complete");
-    }
-
-    // =================================================================
-    // ============= МЕТОДЫ ДЛЯ ТЕСТОВ (package-private) ===============
-    // =================================================================
-
-    int getCachedSessionsCount() {
-        return vaultKeys.size();
-    }
-
-
-    void clearCacheForTests() {
-        vaultKeys.clear();
     }
 }
